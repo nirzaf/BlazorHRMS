@@ -6,3 +6,6 @@ riderModule.iml
 
 # Secrets configuration
 **/appsettings.secrets.json
+
+# macOS system files
+.DS_Store
