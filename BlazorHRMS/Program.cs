@@ -2,9 +2,18 @@ using BlazorHRMS.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load secrets configuration file if it exists
+if (File.Exists(Path.Combine(builder.Environment.ContentRootPath, "appsettings.secrets.json")))
+{
+    builder.Configuration.AddJsonFile("appsettings.secrets.json", optional: true, reloadOnChange: true);
+}
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register MongoDB service
+builder.Services.AddSingleton<BlazorHRMS.Services.MongoDBService>();
 
 var app = builder.Build();
 

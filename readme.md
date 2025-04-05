@@ -12,7 +12,7 @@ These guidelines define the architectural principles, technology choices, and co
 * **Core Functionality:** Employee Data Management, Leave Request Workflow, Performance Review Process.
 * **Key Features:** Role-Based Access Control (RBAC), Calendar Integration, Secure Document Uploads & Management.
 * **Target Platform:** Web Application accessible via modern browsers.
-* **Technology Stack:** .NET 9, C# 13, Blazor Web App, IdentityServer4 (or recommended alternative), Entity Framework Core 9.
+* **Technology Stack:** .NET 9, C# 13, Blazor Web App, IdentityServer4, MongoDB.
 
 **3. Architectural Principles**
 
@@ -32,11 +32,36 @@ These guidelines define the architectural principles, technology choices, and co
 * **Authentication & Authorization:**
     * **Identity Provider:** IdentityServer4 (as requested).
         * **IMPORTANT CAVEAT:** IdentityServer4 is no longer actively maintained by the original creators for open-source use beyond November 2022 security updates. The recommended successor is **Duende IdentityServer**, which requires commercial licensing for production use beyond certain thresholds. **Strongly recommend evaluating Duende IdentityServer or utilizing the built-in OIDC/OAuth features within ASP.NET Core Identity directly, possibly integrating with cloud providers like Microsoft Entra ID (Azure AD) if feasible.** If sticking with IS4, acknowledge the support limitations and potential security risks.
-    * **User/Role Store:** ASP.NET Core Identity integrated with Entity Framework Core 9.
+    * **User/Role Store:** ASP.NET Core Identity integrated with MongoDB.
     * **Protocol:** OpenID Connect (OIDC) for authentication, OAuth 2.0 for API authorization (if APIs are exposed separately).
 * **Database:**
-    * **Type:** Relational Database (e.g., PostgreSQL 16+, SQL Server 2022+). Choice depends on hosting environment and existing infrastructure/expertise. PostgreSQL is often preferred for new projects due to its features and licensing.
-    * **ORM:** Entity Framework Core 9. Utilize DbContext pooling, compiled models (if performance dictates), and efficient querying techniques.
+    * **Type:** MongoDB - a NoSQL document database offering high performance, high availability, and easy scalability.
+    * **Driver:** MongoDB.Driver package for .NET. Install using: `dotnet add package MongoDB.Driver`
+    * **Sample Connection Code:**
+    ```csharp
+    using MongoDB.Driver;
+    using MongoDB.Bson;
+    
+    // Connection string (replace with your actual MongoDB connection string)
+    const string connectionUri = "mongodb+srv://username:<password>@cluster.example.mongodb.net/?appName=myApp";
+    
+    // Configure MongoDB client settings
+    var settings = MongoClientSettings.FromConnectionString(connectionUri);
+    
+    // Set the ServerApi field of the settings object to set the version of the Stable API
+    settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+    
+    // Create a new client and connect to the server
+    var client = new MongoClient(settings);
+    
+    // Send a ping to confirm a successful connection
+    try {
+      var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
+      Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
+    } catch (Exception ex) {
+      Console.WriteLine(ex);
+    }
+    ```
 * **UI Components:** Utilize a mature Blazor component library (e.g., MudBlazor, Radzen Blazor Components, Telerik UI for Blazor) for consistent UI/UX and accelerated development.
 * **Validation:** FluentValidation library for robust, decoupled validation logic.
 * **Background Jobs:** Hangfire or Quartz.NET for scheduling tasks (e.g., leave balance accruals, notification reminders, report generation).
@@ -54,24 +79,25 @@ These guidelines define the architectural principles, technology choices, and co
     * Define application roles (e.g., `Employee`, `Manager`, `HRAdmin`).
     * Assign users to roles via ASP.NET Core Identity.
     * Implement authorization using `[Authorize]` attributes with roles and/or policy-based authorization for fine-grained control over features and data access. Policies should be defined centrally.
-* **Data Modeling (EF Core):**
-    * Design entities following DDD principles where applicable (rich domain models preferred over anemic ones).
-    * Use EF Core Migrations for database schema evolution.
-    * Configure relationships, constraints, indexes, and value conversions appropriately using Fluent API.
+* **Data Modeling (MongoDB):**
+    * Design document schemas following DDD principles where applicable.
+    * Utilize MongoDB's flexible schema to model complex domain entities.
+    * Consider embedding related data for frequently accessed information.
+    * Use references (similar to foreign keys) for large collections or data that changes frequently.
     * Implement soft deletes (`IsDeleted` flag) for critical data where necessary.
     * Pay attention to PII data; identify and plan for potential encryption at rest if required.
 * **API Design (Internal/if needed):** If internal APIs are developed (e.g., for future mobile clients or microservices), adhere to RESTful principles or consider gRPC for high-performance inter-service communication. Use OpenAPI/Swagger for documentation.
 * **Business Logic:** Encapsulate core business rules within Application Services or Domain Services. Use patterns like MediatR (for CQRS) to decouple command/query handling if complexity warrants it.
 * **Employee Data Module:**
-    * Core entity: `Employee` (personal details, contact info, job details, employment history).
+    * Core document: `Employee` (personal details, contact info, job details, employment history).
     * Consider data privacy implications (GDPR, etc.).
     * Implement audit trails for changes to sensitive employee data.
 * **Leave Request Module:**
-    * Entities: `LeaveRequest`, `LeaveType`, `LeaveBalance`.
+    * Documents: `LeaveRequest`, `LeaveType`, `LeaveBalance`.
     * Workflow: Define states (Submitted, Approved, Rejected, Cancelled) and transitions. Implement state management logic.
     * Logic for balance calculation, accrual (potentially via background jobs).
 * **Performance Review Module:**
-    * Entities: `PerformanceReview`, `ReviewTemplate`, `ReviewSection`, `Rating`, `Feedback`.
+    * Documents: `PerformanceReview`, `ReviewTemplate`, `ReviewSection`, `Rating`, `Feedback`.
     * Support configurable review cycles and templates.
 * **Document Uploads:**
     * **Storage:** Utilize cloud blob storage (Azure Blob Storage, AWS S3) for scalability, durability, and security. Avoid storing files directly in the database or on the web server's local file system.
@@ -90,7 +116,7 @@ These guidelines define the architectural principles, technology choices, and co
 **6. Non-Functional Requirements**
 
 * **Security:** Enforce HTTPS. Implement security headers (CSP, HSTS). Protect against common web vulnerabilities (XSS, CSRF - Blazor helps). Regularly scan dependencies. Secure configuration and secrets. Perform security code reviews and penetration testing.
-* **Performance:** Optimize database queries (indexing, avoid N+1). Use asynchronous programming (`async`/`await`) correctly. Implement caching. Monitor application performance.
+* **Performance:** Optimize MongoDB queries (indexing, avoid N+1). Use asynchronous programming (`async`/`await`) correctly. Implement caching. Monitor application performance.
 * **Maintainability:** Adhere to SOLID principles. Write clean, well-documented code. Implement comprehensive unit and integration tests.
 * **Testability:** Ensure components and services are designed for testability (DI, interfaces, mocking). Aim for high test coverage for business logic.
 * **Reliability:** Implement robust error handling and logging. Use durable storage for documents and data.
