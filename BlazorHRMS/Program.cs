@@ -1,4 +1,7 @@
 using BlazorHRMS.Components;
+using BlazorHRMS.Services;
+using BlazorHRMS.Infrastructure.Repositories;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +16,16 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Register MongoDB service
-builder.Services.AddSingleton<BlazorHRMS.Services.MongoDBService>();
+builder.Services.AddSingleton<IMongoDBService, MongoDBService>();
+
+// Register repositories
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+builder.Services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+builder.Services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
+builder.Services.AddScoped<IPerformanceReviewRepository, PerformanceReviewRepository>();
+builder.Services.AddScoped<IReviewTemplateRepository, ReviewTemplateRepository>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 
 var app = builder.Build();
 
